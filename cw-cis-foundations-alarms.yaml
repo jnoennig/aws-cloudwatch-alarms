@@ -39,3 +39,30 @@ Resources:
       Statistic: Sum
       Threshold: 20
       TreatMissingData: missing
+  ConsoleWithoutMfaMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: '{ ($.eventName = "ConsoleLogin") && ($.additionalEventData.MFAUsed != "Yes") }'
+      LogGroupName: !Ref CloudTrailLogGroupName
+      MetricTransformations:
+        -
+          MetricValue: '1'
+          MetricNamespace: !Ref NameSpace
+          MetricName: ConsoleWithoutMfaMetric
+  ConsoleWithoutMfaAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: True
+      AlarmActions:
+        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+      AlarmDescription: Alarms on when a user signs in to the management console without MFA
+      AlarmName: ConsoleWithoutMfaAlarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: ConsoleWithoutMfaMetric
+      Namespace: !Ref NameSpace
+      Period: 60
+      Statistic: Sum
+      Threshold: 1
+      TreatMissingData: missing
+      
