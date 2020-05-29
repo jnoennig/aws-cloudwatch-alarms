@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS CIS Foundations Benchmarks for CloudWatch log metric filters and alarms.
+Parameters:
+  CloudTrailLogGroupName:
+    Type: String
+    Description: The CloudTrail log group name.
+  NameSpace:
+    Type: String
+    Default: CISBenchmarks
+    Description: Alarm namespace 
+  SnsTopicName:
+    Type: String
+    Description: The SNS Topic you want to send the alarm to.
+Resources:
+  UnauthorizedApiMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterPattern: '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }'
+      LogGroupName: !Ref CloudTrailLogGroupName
+      MetricTransformations:
+        - 
+          MetricValue: "1"
+          MetricNamespace: !Ref NameSpace
+          MetricName: UnauthorizedApiCallsMetric
+  UnauthorizedApiAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: True 
+      AlarmActions: 
+        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+      AlarmDescription: Alarms on unauthorized API calls
+      AlarmName: UnauthorizedApiCallsAlarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: UnauthorizedApiCallsMetric
+      Namespace: !Ref NameSpace
+      Period: 300
+      Statistic: Sum
+      Threshold: 20
+      TreatMissingData: missing
