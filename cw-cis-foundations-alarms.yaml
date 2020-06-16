@@ -1,68 +1,355 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  AWS CIS Foundations Benchmarks for CloudWatch log metric filters and alarms.
+    AWS CIS Foundations Benchmarks for CloudWatch log metric filters and alarms.
 Parameters:
-  CloudTrailLogGroupName:
-    Type: String
-    Description: The CloudTrail log group name.
-  NameSpace:
-    Type: String
-    Default: CISBenchmarks
-    Description: Alarm namespace 
-  SnsTopicName:
-    Type: String
-    Description: The SNS Topic you want to send the alarm to.
+    CloudTrailLogGroupName:
+        Type: String
+        Default: 'aws-controltower/CloudTrailLogs'
+        Description: The CloudTrail log group name.
+    Namespace:
+        Type: String
+        Default: CISBenchmarks
+        Description: Alarm namespace 
+    SnsTopicName:
+        Type: String
+        Description: The SNS Topic name you want to send the alarm to.
 Resources:
-  UnauthorizedApiMetricFilter:
-    Type: AWS::Logs::MetricFilter
-    Properties:
-      FilterPattern: '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }'
-      LogGroupName: !Ref CloudTrailLogGroupName
-      MetricTransformations:
-        - 
-          MetricValue: "1"
-          MetricNamespace: !Ref NameSpace
-          MetricName: UnauthorizedApiCallsMetric
-  UnauthorizedApiAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      ActionsEnabled: True 
-      AlarmActions: 
-        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
-      AlarmDescription: Alarms on unauthorized API calls
-      AlarmName: UnauthorizedApiCallsAlarm
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      EvaluationPeriods: 1
-      MetricName: UnauthorizedApiCallsMetric
-      Namespace: !Ref NameSpace
-      Period: 300
-      Statistic: Sum
-      Threshold: 20
-      TreatMissingData: missing
-  ConsoleWithoutMfaMetricFilter:
-    Type: AWS::Logs::MetricFilter
-    Properties:
-      FilterPattern: '{ ($.eventName = "ConsoleLogin") && ($.additionalEventData.MFAUsed != "Yes") }'
-      LogGroupName: !Ref CloudTrailLogGroupName
-      MetricTransformations:
-        -
-          MetricValue: '1'
-          MetricNamespace: !Ref NameSpace
-          MetricName: ConsoleWithoutMfaMetric
-  ConsoleWithoutMfaAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      ActionsEnabled: True
-      AlarmActions:
-        - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
-      AlarmDescription: Alarms on when a user signs in to the management console without MFA
-      AlarmName: ConsoleWithoutMfaAlarm
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      EvaluationPeriods: 1
-      MetricName: ConsoleWithoutMfaMetric
-      Namespace: !Ref NameSpace
-      Period: 60
-      Statistic: Sum
-      Threshold: 1
-      TreatMissingData: missing
-      
+    UnauthorizedApiMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                - 
+                    MetricValue: "1"
+                    MetricNamespace: !Ref Namespace
+                    MetricName: UnauthorizedApiCallsMetric
+    UnauthorizedApiAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True 
+            AlarmActions: 
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms on unauthorized API calls - CIS Benchmark 3.1
+            AlarmName: UnauthorizedApiCallsAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: UnauthorizedApiCallsMetric
+            Namespace: !Ref Namespace
+            Period: 300
+            Statistic: Sum
+            Threshold: 20
+            TreatMissingData: missing
+    ConsoleWithoutMfaMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventName = "ConsoleLogin") && ($.additionalEventData.MFAUsed != "Yes") }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: ConsoleWithoutMfaMetric
+    ConsoleWithoutMfaAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms on when a user signs in to the management console without MFA - CIS Benchmark 3.2
+            AlarmName: ConsoleWithoutMfaAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: ConsoleWithoutMfaMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    RootUsageMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ $.userIdentity.type = "Root" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != "AwsServiceEvent" }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                - 
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: RootUsageMetric
+    RootUsageAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions: 
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms when the root user is taking actions - CIS Benchmark 3.3
+            AlarmName: RootUsageAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: RootUsageMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    IamPolicyChangeMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventName=DeleteGroupPolicy) || ($.eventName=DeleteRolePolicy) || ($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy) || ($.eventName=PutRolePolicy) || ($.eventName=PutUserPolicy) || ($.eventName=CreatePolicy) || ($.eventName=DeletePolicy) ||($.eventName=CreatePolicyVersion) || ($.eventName=DeletePolicyVersion) || ($.eventName=AttachRolePolicy) || ($.eventName=DetachRolePolicy) || ($.eventName=AttachUserPolicy)|| ($.eventName=DetachUserPolicy) || ($.eventName=AttachGroupPolicy) || ($.eventName=DetachGroupPolicy) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: IamPolicyChangeMetric
+    IamPolicyChangeAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions: 
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms when an IAM policy is changed - CIS Benchmark 3.4
+            AlarmName: IamPolicyChangeAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: IamPolicyChangeMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    ConsoleAuthFailuresMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventName = ConsoleLogin) && ($.errorMessage = "Failed authentication") }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: ConsoleAuthFailuresMetric
+    ConsoleAuthFailuresAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms when console authentication failures - CIS Benchmark 3.6
+            AlarmName: ConsoleAuthFailuresAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: ConsoleAuthFailuresMetric
+            Namespace: !Ref Namespace
+            Period: 180
+            Statistic: Sum
+            Threshold: 3
+            TreatMissingData: missing
+    CmkDisableDelMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{($.eventSource = kms.amazonaws.com) && (($.eventName=DisableKey)||($.eventName=ScheduleKeyDeletion)) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: CmkDisableDelMetric
+    CmkDisableDelAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms if a KMS CMK is disabled or scheduled for deletion - CIS Benchmark 3.7
+            AlarmName: CmkDisableDelAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: CmkDisableDelMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    S3BucketPolicyMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: S3BucketPolicyMetric
+    S3BucketPolicyAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms if an S3 bucket policy is changed - CIS Benchmark 3.8
+            AlarmName: S3BucketPolicyAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: S3BucketPolicyMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    ConfigChangesMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventSource = config.amazonaws.com) && (($.eventName=StopConfigurationRecorder)||($.eventName=DeleteDeliveryChannel) ||($.eventName=PutDeliveryChannel)||($.eventName=PutConfigurationRecorder)) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: ConfigChangesMetric
+    ConfigChangesAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms if AWS Config has changed - CIS Benchmark 3.9
+            AlarmName: ConfigChangesAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: ConfigChangesMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    SecurityGroupChangesMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: SecurityGroupChangesMetric
+    SecurityGroupChangesAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms if a Security Group is changed - CIS Benchmark 3.10
+            AlarmName: SecurityGroupChangesAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: SecurityGroupChangesMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    NaclChangesMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: NaclChangesMetric
+    NaclChangesAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms if a Network Access Control List is changed - CIS Benchmark 3.11
+            AlarmName: NaclChangesAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: NaclChangesMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    NetGatewayChangesMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway) || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway) || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: NetGatewayChangesMetric
+    NetGatewayChangesAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms if a Network Gateway is changed - CIS Benchmark 3.12
+            AlarmName: NetGatewayChangesAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: NetGatewayChangesMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    RouteTableChangesMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventName = CreateRoute) || ($.eventName = CreateRouteTable) || ($.eventName = ReplaceRoute) || ($.eventName = ReplaceRouteTableAssociation) || ($.eventName = DeleteRouteTable) || ($.eventName = DeleteRoute) || ($.eventName = DisassociateRouteTable) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: RouteTableChangesMetric
+    RouteTableChangesAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms if route table is changed - CIS Benchmark 3.13
+            AlarmName: RoutTableChangesAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: RouteTableChangesMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+    VpcChangesMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: VpcChangesMetric
+    VpcChangesAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions:
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms if a VPC is changed - CIS Benchmark 3.14
+            AlarmName: VpcChangesAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: VpcChangesMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
+            
