@@ -118,6 +118,32 @@ Resources:
             Statistic: Sum
             Threshold: 1
             TreatMissingData: missing
+    CloudTrailChangesMetricFilter:
+        Type: AWS::Logs::MetricFilter
+        Properties:
+            FilterPattern: '{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail) || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName = StopLogging) }'
+            LogGroupName: !Ref CloudTrailLogGroupName
+            MetricTransformations:
+                -
+                    MetricValue: '1'
+                    MetricNamespace: !Ref Namespace
+                    MetricName: CloudTrailChangesMetric
+    CloudTrailChangesAlarm:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            ActionsEnabled: True
+            AlarmActions: 
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SnsTopicName}'
+            AlarmDescription: Alarms when a CloudTrail trail is changed - CIS Benchmark 3.5
+            AlarmName: CloudTrailChangesAlarm
+            ComparisonOperator: GreaterThanOrEqualToThreshold
+            EvaluationPeriods: 1
+            MetricName: CloudTrailChangesMetric
+            Namespace: !Ref Namespace
+            Period: 60
+            Statistic: Sum
+            Threshold: 1
+            TreatMissingData: missing
     ConsoleAuthFailuresMetricFilter:
         Type: AWS::Logs::MetricFilter
         Properties:
